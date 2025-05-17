@@ -1,7 +1,7 @@
 #include "vm.h"
 #include "teste.cpp"
 
-void run_binary()
+int run_binary(int argc, char *argv[])
 {
     if (argc != 2)
     {
@@ -26,7 +26,7 @@ void run_binary()
 
 int main(int argc, char *argv[])
 {
-    // run_binary();
+    // run_binary(argc, argv);
 
     run_testes();
 }
