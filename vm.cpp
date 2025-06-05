@@ -35,7 +35,7 @@
 #endif
 
 VM::VM(uint8_t *program, uint16_t progLen, uint16_t stackSize)
-    : _memory(new uint8_t[progLen + stackSize]), _memSize(progLen + stackSize), _progLen(progLen), _stackSize(stackSize)
+    : _memory(new uint8_t[progLen + stackSize]), _memSize(progLen + stackSize), _progLen(progLen), _stackSize(stackSize), FSIG(false), RSIG(0)
 {
     memcpy(this->_memory, program, progLen);
     this->reset();
@@ -48,6 +48,8 @@ VM::~VM()
 
 void VM::reset()
 {
+    this->FSIG = false;
+    this->RSIG = 0;
     memset(&this->_memory[this->_progLen], 0, this->_stackSize);
     memset(this->_registers, 0, REGISTER_COUNT * sizeof(uint32_t));
     this->_registers[SP] = this->_progLen + this->_stackSize;
@@ -90,6 +92,25 @@ uint32_t VM::getRegister(Register reg)
 void VM::setRegister(Register reg, uint32_t val)
 {
     this->_registers[reg] = val;
+}
+
+int VM::getRegisterSig()
+{
+    int temp = this->RSIG;
+    /**\/ zerando o registrador para futuras operações; */
+    this->FSIG = false;
+    this->RSIG = 0;
+    return temp;
+}
+
+void VM::setRegisterSig(int val)
+{
+    this->RSIG = val;
+}
+
+void VM::setFlagSig(bool val)
+{
+    this->FSIG = val;
 }
 
 ExecResult VM::run(uint32_t maxInstr)
@@ -386,7 +407,16 @@ ExecResult VM::run(uint32_t maxInstr)
             _CHECK_BYTES_AVAIL(1)
             const uint8_t reg = _NEXT_BYTE;
             _CHECK_REGISTER_VALID(reg)
-            (*((float *)&this->_registers[reg]))++;
+
+            if(this->FSIG){
+                float floatValue = static_cast<float>(this->RSIG);
+                floatValue++;
+                this->RSIG = static_cast<int>(floatValue);
+            }else{
+                (*((float *)&this->_registers[reg]))++;
+            }
+            // \/ antiga forma para valores uint32_t;
+            // (*((float *)&this->_registers[reg]))++;
             break;
         }
         case OP_DEC:
@@ -402,7 +432,16 @@ ExecResult VM::run(uint32_t maxInstr)
             _CHECK_BYTES_AVAIL(1)
             const uint8_t reg = _NEXT_BYTE;
             _CHECK_REGISTER_VALID(reg)
-            (*((float *)&this->_registers[reg]))--;
+
+            if(this->FSIG){
+                float floatValue = static_cast<float>(this->RSIG);
+                floatValue--;
+                this->RSIG = static_cast<int>(floatValue);
+            }else{
+                (*((float *)&this->_registers[reg]))--;
+            }
+            // \/ antiga forma para valores uint32_t;
+            // (*((float *)&this->_registers[reg]))--;
             break;
         }
         case OP_ADD:

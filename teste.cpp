@@ -6,7 +6,46 @@
 #define _U8_GARBAGE 0xF1U
 
 #define _NTH_BYTE(num, n) (num >> (8 * n)) & 0xFF
-#define _ALMOST_EQUAL(x, y) fabs(x - y) < 0.0001
+// #define _ALMOST_EQUAL(x, y) fabs(x - y) < 0.0001
+
+
+/**\/ verificar aproximações de numeros float/double; */
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+bool equal_within_ulps(float x, float y, std::size_t n)
+{
+    // Since `epsilon()` is the gap size (ULP, unit in the last place)
+    // of floating-point numbers in interval [1, 2), we can scale it to
+    // the gap size in interval [2^e, 2^{e+1}), where `e` is the exponent
+    // of `x` and `y`.
+ 
+    // If `x` and `y` have different gap sizes (which means they have
+    // different exponents), we take the smaller one. Taking the bigger
+    // one is also reasonable, I guess.
+    const float m = std::min(std::fabs(x), std::fabs(y));
+ 
+    // Subnormal numbers have fixed exponent, which is `min_exponent - 1`.
+    const int exp = m < std::numeric_limits<float>::min()
+                  ? std::numeric_limits<float>::min_exponent - 1
+                  : std::ilogb(m);
+ 
+    // We consider `x` and `y` equal if the difference between them is
+    // within `n` ULPs.
+    return std::fabs(x - y) <= n * std::ldexp(std::numeric_limits<float>::epsilon(), exp);
+}
+
+bool almost(float x, float y){
+    for (std::size_t n = 0; n <= 10; ++n) {
+        if (equal_within_ulps(x, y, n)) {
+            return true;
+        }
+    }
+    return false;
+}
+#define _ALMOST_EQUAL(x, y) almost(x, y)
+
 
 void TEST_CASE_OP_INC()
 {
@@ -68,12 +107,17 @@ void TEST_CASE_OP_FINC()
 
     printf("%s\n", "Test: -5;");
     {
+        vm.reset();
         float val = -5.0f;
         float expected = -4.0f;
-        vm.setRegister(R0, *((uint32_t *)&val));
+
+        vm.setGlobalReg(val);
+
+        // vm.setRegister(R0, ((int32_t)val));
         assert(vm.run() == ExecResult::VM_FINISHED);
-        uint32_t actual = vm.getRegister(R0);
-        assert(_ALMOST_EQUAL(*((float *)&actual), expected));
+        // int32_t actual = vm.getRegister(R0);
+        float actual = vm.getRegisterSig();
+        assert(_ALMOST_EQUAL(actual, expected));
     }
 }
 
@@ -137,12 +181,17 @@ void TEST_CASE_OP_FDEC()
 
     printf("%s\n", "Test: -5;");
     {
+        vm.reset();
         float val = -5.0f;
         float expected = -6.0f;
-        vm.setRegister(R0, *((uint32_t *)&val));
+
+        vm.setGlobalReg(val);
+
+        // vm.setRegister(R0, *((uint32_t *)&val));
         assert(vm.run() == ExecResult::VM_FINISHED);
-        uint32_t actual = vm.getRegister(R0);
-        assert(_ALMOST_EQUAL(*((float *)&actual), expected));
+        // uint32_t actual = vm.getRegister(R0);
+        float actual = vm.getRegisterSig();
+        assert(_ALMOST_EQUAL(actual, expected));
     }
 }
 

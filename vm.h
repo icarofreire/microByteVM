@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <type_traits>
 
 enum ExecResult : uint8_t
 {
@@ -161,7 +162,22 @@ class VM
     uint32_t getRegister(Register reg);
     void setRegister(Register reg, uint32_t val);
 
+    int getRegisterSig();
+    void setRegisterSig(int val);
+    void setFlagSig(bool val);
+
+    template <typename T> void setGlobalReg(T val){
+        if(std::is_signed<decltype(val)>::value){
+            setFlagSig(true);
+            setRegisterSig(val);
+        }
+    }
+
   protected:
+    /**\/ sinalizador para operações de valores negativos; */
+    bool FSIG;
+    /**\/ registrador para operações de valores negativos; */
+    int RSIG;
     uint8_t *_memory;
     uint32_t _registers[REGISTER_COUNT] = {0};
     const uint16_t _memSize;
